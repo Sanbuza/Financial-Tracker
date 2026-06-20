@@ -1,91 +1,82 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-import requests
 import os
-from dotenv import load_dotenv
+from flask import Flask, jsonify, request, send_from_directory
+from flask_cors import CORS
+from sheets_client import sheets_get, sheets_post
 
-load_dotenv()
+FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
 
-app = Flask(__name__)
-CORS(app, origins="*", allow_headers=["Content-Type", "Access-Control-Request-Private-Network"])
+app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path="")
+CORS(app)
 
-@app.after_request
-def add_headers(response):
-    response.headers["Access-Control-Allow-Private-Network"] = "true"
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    return response
-
-SHEETS_URL = os.getenv("SHEETS_API_URL")
+REVIEW_CATEGORY = "Others"
+ALLOWED_FILTERS = {"owner", "needs_review", "transaction_id", "category", "from_date", "to_date"}
 
 
-def sheets_get(filters={}):
-    r = requests.get(SHEETS_URL, params=filters)
-    r.raise_for_status()
-    body = r.json()
-    if body.get("status") != "ok":
-        raise ValueError(body.get("message", "Error from Sheets API"))
-    return body["data"]
+def format_amount(raw) -> str:
+    s = str(raw).strip()
+    if "(" in s and ")" in s:
+        s = "-" + s.replace("(", "").replace(")", "")
+    cleaned = s.replace("$", "").replace(",", "").strip()
+    try:
+        value = float(cleaned)
+    except ValueError:
+        value = 0.0
+    return f"(${abs(value):.2f})" if value < 0 else f"${value:.2f}"
 
 
-def sheets_post(payload):
-    r = requests.post(SHEETS_URL, json=payload)
-    r.raise_for_status()
-    body = r.json()
-    if body.get("status") != "ok":
-        raise ValueError(body.get("message", "Error from Sheets API"))
-    return body
+@app.route("/")
+def index():
+    return send_from_directory(FRONTEND_DIR, "index.html")
 
 
 @app.route("/api/transactions", methods=["GET"])
-def get_transactions():
-    filters = {k: v for k, v in request.args.items()}
-    data = sheets_get(filters)
-    return jsonify(data)
+def list_transactions():
+    filters = {k: v for k, v in request.args.items() if k in ALLOWED_FILTERS}
+    return jsonify(sheets_get(filters))
 
 
 @app.route("/api/transactions", methods=["POST"])
 def create_transaction():
-    body = request.get_json()
-    needs_review = "Yes" if body.get("category") == "Others" else "No"
-    payload = {
-        "action": "create",
-        "data": {
-            "Date": body.get("date"),
-            "Account": body.get("account", ""),
-            "Owner": body.get("owner"),
-            "Merchant": body.get("merchant"),
-            "Amount (CAD)": body.get("amount"),
-            "Raw Category": body.get("category"),
-            "App Category": body.get("category"),
-            "App Subcategory": body.get("subcategory", ""),
-            "Needs Review": needs_review,
-        }
+    data = request.get_json(silent=True) or {}
+    category = data.get("category", "")
+    needs_review = "Yes" if category == REVIEW_CATEGORY else "No"
+    merchant = data.get("merchant") or data.get("description", "")
+
+    sheet_row = {
+        "Date": data.get("date", ""),
+        "Account": data.get("account", ""),
+        "Owner": data.get("owner", ""),
+        "Merchant": merchant,
+        "Amount (CAD)": format_amount(data.get("amount", 0)),
+        "Raw Category": category,
+        "App Category": category,
+        "App Subcategory": data.get("subcategory", ""),
+        "Needs Review": needs_review,
     }
-    result = sheets_post(payload)
-    return jsonify({"success": True, "transaction_id": result.get("transaction_id")})
+
+    result = sheets_post({"action": "create", "data": sheet_row})
+    if result.get("status") == "ok":
+        return jsonify({"success": True, "transaction_id": result.get("transaction_id")})
+    return jsonify({"success": False, "error": result.get("message")}), 502
 
 
 @app.route("/api/transactions/<transaction_id>", methods=["PUT"])
 def update_transaction(transaction_id):
-    body = request.get_json()
-    payload = {
-        "action": "update",
-        "transaction_id": transaction_id,
-        "data": body
-    }
-    result = sheets_post(payload)
-    return jsonify({"success": True, "message": result.get("message")})
+    data = request.get_json(silent=True) or {}
+    result = sheets_post({"action": "update", "transaction_id": transaction_id, "data": data})
+    if result.get("status") == "ok":
+        return jsonify({"success": True, "message": result.get("message")})
+    return jsonify({"success": False, "error": result.get("message")}), 502
 
 
 @app.route("/api/transactions/<transaction_id>", methods=["DELETE"])
 def delete_transaction(transaction_id):
-    payload = {
-        "action": "delete",
-        "transaction_id": transaction_id
-    }
-    result = sheets_post(payload)
-    return jsonify({"success": True, "message": result.get("message")})
+    result = sheets_post({"action": "delete", "transaction_id": transaction_id})
+    if result.get("status") == "ok":
+        return jsonify({"success": True, "message": result.get("message")})
+    return jsonify({"success": False, "error": result.get("message")}), 502
 
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', debug=True, port=5000)
+    port = int(os.getenv("PORT", "5000"))
+    app.run(host="0.0.0.0", port=port, debug=True)

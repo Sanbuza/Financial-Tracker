@@ -1,105 +1,193 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Finance Tracker</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="container">
+  <div class="layout">
 
-    <header class="header">
-      <h1>Finance Tracker</h1>
-      <span class="month-label" id="monthLabel"></span>
-    </header>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-logo">F</span>
+        <span class="brand-name">Finance Tracker</span>
+      </div>
+      <nav class="nav">
+        <a class="nav-item is-active" href="#">Dashboard</a>
+        <a class="nav-item" href="#">Transacciones</a>
+        <a class="nav-item" href="#">Metas</a>
+        <a class="nav-item" href="#">Presupuesto</a>
+      </nav>
+      <div class="nav-footer">
+        <button class="theme-toggle" id="theme-toggle" title="Cambiar tema">☀ / ☾</button>
+      </div>
+    </aside>
 
-    <section class="summary-card">
-      <p class="summary-label">Gastado este mes</p>
-      <p class="summary-amount" id="totalSpent">—</p>
-    </section>
-
-    <section class="card">
-      <h2 class="section-title">Por categoría</h2>
-      <div id="categoryList"><p class="loading">Cargando...</p></div>
-    </section>
-
-    <section class="card">
-      <h2 class="section-title">Nueva transacción</h2>
-      <form id="txForm">
-
-        <div class="field">
-          <label>Tipo</label>
-          <div class="tipo-toggle">
-            <button type="button" class="tipo-btn active" data-tipo="gasto">Gasto</button>
-            <button type="button" class="tipo-btn" data-tipo="ingreso">Ingreso</button>
+    <!-- Main -->
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1>¡Hola, Santiago &amp; Carolina!</h1>
+          <p class="subtitle">Período: <span id="period-label">—</span></p>
+        </div>
+        <div class="topbar-actions">
+          <div class="profile">
+            <span class="profile-avatar">SC</span>
+            <div class="profile-info">
+              <strong>Santiago &amp; Carolina</strong>
+              <span>Cuenta conjunta</span>
+            </div>
           </div>
+          <button class="btn-primary" id="open-form">+ Agregar gasto</button>
+        </div>
+      </header>
+
+      <!-- KPIs -->
+      <section class="kpis">
+        <article class="card kpi">
+          <div class="kpi-top">Balance total</div>
+          <p class="kpi-value" id="kpi-balance">—</p>
+          <p class="kpi-delta" id="kpi-balance-delta"></p>
+        </article>
+        <article class="card kpi">
+          <div class="kpi-top">Ingresos</div>
+          <p class="kpi-value" id="kpi-income">—</p>
+          <p class="kpi-delta" id="kpi-income-delta"></p>
+        </article>
+        <article class="card kpi">
+          <div class="kpi-top">Gastos</div>
+          <p class="kpi-value" id="kpi-expense">—</p>
+          <p class="kpi-delta" id="kpi-expense-delta"></p>
+        </article>
+        <article class="card kpi">
+          <div class="kpi-top">Ahorro</div>
+          <p class="kpi-value" id="kpi-savings">—</p>
+          <p class="kpi-delta" id="kpi-savings-delta"></p>
+        </article>
+      </section>
+
+      <!-- Charts -->
+      <section class="grid grid-money">
+        <article class="card">
+          <div class="card-head">
+            <h2>Flujo de dinero</h2>
+            <div class="legend-inline">
+              <span><i class="dot dot-income"></i> Ingresos</span>
+              <span><i class="dot dot-expense"></i> Gastos</span>
+            </div>
+          </div>
+          <div class="chart-box"><canvas id="flow-chart"></canvas></div>
+        </article>
+        <article class="card">
+          <div class="card-head"><h2>Presupuesto</h2></div>
+          <div class="donut-wrap">
+            <canvas id="budget-chart"></canvas>
+            <div class="donut-center">
+              <span>Gasto total</span>
+              <strong id="budget-total">—</strong>
+            </div>
+          </div>
+          <ul class="legend" id="budget-legend"></ul>
+        </article>
+      </section>
+
+      <!-- Transactions + Goals -->
+      <section class="grid grid-bottom">
+        <article class="card">
+          <div class="card-head">
+            <h2>Transacciones recientes</h2>
+          </div>
+          <table class="txn-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Monto</th>
+                <th>Comercio</th>
+                <th>Cuenta</th>
+                <th>Categoría</th>
+              </tr>
+            </thead>
+            <tbody id="txn-rows"></tbody>
+          </table>
+        </article>
+        <article class="card">
+          <div class="card-head"><h2>Metas de ahorro</h2></div>
+          <ul class="goals" id="goals-list"></ul>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <h2>Agregar transacción</h2>
+        <button class="icon-btn" id="close-form">✕</button>
+      </div>
+      <form id="transaction-form" class="form">
+
+        <div class="field-row">
+          <label>Tipo
+            <div class="tipo-toggle">
+              <button type="button" class="tipo-btn active" data-tipo="gasto">Gasto</button>
+              <button type="button" class="tipo-btn" data-tipo="ingreso">Ingreso</button>
+            </div>
+          </label>
         </div>
 
-        <div class="field">
-          <label for="date">Fecha</label>
-          <input type="date" id="date" required />
-        </div>
-
-        <div class="field">
-          <label for="amount">Monto (CAD)</label>
-          <input type="number" id="amount" step="0.01" min="0" placeholder="45.00" required />
-        </div>
-
-        <div class="field">
-          <label for="merchant">Comercio</label>
-          <input type="text" id="merchant" placeholder="No Frills" required />
-        </div>
-
-        <div class="field">
-          <label for="category">Categoría</label>
-          <select id="category" required>
+        <label>Fecha
+          <input type="date" id="date" name="date" required />
+        </label>
+        <label>Monto (CAD)
+          <input type="number" id="amount" name="amount" step="0.01" min="0" placeholder="45.00" required />
+        </label>
+        <label>Comercio / Descripción
+          <input type="text" id="merchant" name="merchant" placeholder="No Frills" required />
+        </label>
+        <label>Categoría
+          <select id="category" name="category" required>
             <option value="">Seleccionar...</option>
             <option>Groceries</option>
             <option>Entertainment</option>
-            <option>Fixed &amp; Home</option>
+            <option value="Fixed &amp; Home">Fixed &amp; Home</option>
             <option>Medical</option>
             <option>Pets</option>
             <option>Transportation</option>
             <option>Others</option>
           </select>
-        </div>
-
-        <div class="field">
-          <label for="account">Cuenta</label>
-          <select id="account" required>
+        </label>
+        <label>Cuenta
+          <select id="account" name="account" required>
             <option value="">Seleccionar...</option>
             <option>CIBC Credit Card</option>
             <option>American Express</option>
             <option>Neo Account</option>
             <option>Joint Account</option>
           </select>
-        </div>
-
-        <div class="field">
-          <label for="owner">Dueño</label>
-          <select id="owner" required>
+        </label>
+        <label>Dueño
+          <select id="owner" name="owner" required>
             <option value="">Seleccionar...</option>
             <option>Santiago</option>
             <option>Carolina</option>
             <option>Joint</option>
           </select>
-        </div>
+        </label>
 
-        <button type="submit" class="btn-submit" id="submitBtn">Guardar transacción</button>
-        <p class="form-msg" id="formMsg"></p>
+        <button type="submit" class="btn-primary" id="submit-btn">Guardar</button>
+        <p class="form-status" id="form-status" role="status"></p>
       </form>
-    </section>
-
-    <section class="card">
-      <h2 class="section-title">Recientes</h2>
-      <div id="txList"><p class="loading">Cargando...</p></div>
-    </section>
-
+    </div>
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
