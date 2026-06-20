@@ -24,25 +24,36 @@
 
     <section class="card">
       <h2 class="section-title">Por categoría</h2>
-      <div id="categoryList"></div>
+      <div id="categoryList"><p class="loading">Cargando...</p></div>
     </section>
 
     <section class="card">
       <h2 class="section-title">Nueva transacción</h2>
       <form id="txForm">
+
+        <div class="field">
+          <label>Tipo</label>
+          <div class="tipo-toggle">
+            <button type="button" class="tipo-btn active" data-tipo="gasto">Gasto</button>
+            <button type="button" class="tipo-btn" data-tipo="ingreso">Ingreso</button>
+          </div>
+        </div>
+
         <div class="field">
           <label for="date">Fecha</label>
           <input type="date" id="date" required />
         </div>
+
         <div class="field">
           <label for="amount">Monto (CAD)</label>
-          <input type="number" id="amount" step="0.01" placeholder="-45.00" required />
-          <span class="field-hint">Negativo = gasto · Positivo = ingreso</span>
+          <input type="number" id="amount" step="0.01" min="0" placeholder="45.00" required />
         </div>
+
         <div class="field">
           <label for="merchant">Comercio</label>
           <input type="text" id="merchant" placeholder="No Frills" required />
         </div>
+
         <div class="field">
           <label for="category">Categoría</label>
           <select id="category" required>
@@ -56,10 +67,18 @@
             <option>Others</option>
           </select>
         </div>
+
         <div class="field">
           <label for="account">Cuenta</label>
-          <input type="text" id="account" placeholder="CIBC Credit Card" />
+          <select id="account" required>
+            <option value="">Seleccionar...</option>
+            <option>CIBC Credit Card</option>
+            <option>American Express</option>
+            <option>Neo Account</option>
+            <option>Joint Account</option>
+          </select>
         </div>
+
         <div class="field">
           <label for="owner">Dueño</label>
           <select id="owner" required>
@@ -69,6 +88,7 @@
             <option>Joint</option>
           </select>
         </div>
+
         <button type="submit" class="btn-submit" id="submitBtn">Guardar transacción</button>
         <p class="form-msg" id="formMsg"></p>
       </form>
@@ -76,7 +96,7 @@
 
     <section class="card">
       <h2 class="section-title">Recientes</h2>
-      <div id="txList"></div>
+      <div id="txList"><p class="loading">Cargando...</p></div>
     </section>
 
   </div>

@@ -10,24 +10,35 @@ const BUDGETS = {
   'Others':         200,
 };
 
-const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
-                     'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const MONTH_NAMES = ['Ene','Feb','Mar','Abr','May','Jun',
+                     'Jul','Ago','Sep','Oct','Nov','Dic'];
 
+// Convierte el valor del Sheet (número o string con formato) a float
 function parseAmount(val) {
   if (val === null || val === undefined || val === '') return 0;
   if (typeof val === 'number') return val;
-  const str = String(val);
-  if (str.startsWith('(')) return -parseFloat(str.replace(/[($),]/g, ''));
-  return parseFloat(str.replace(/[$,]/g, '')) || 0;
+  const s = String(val).trim();
+  if (s.startsWith('(')) return -parseFloat(s.replace(/[($),]/g, ''));
+  return parseFloat(s.replace(/[$,]/g, '')) || 0;
 }
 
-function formatForAPI(num) {
-  const abs = Math.abs(num).toFixed(2);
-  return num < 0 ? `($${abs})` : `$${abs}`;
+// Formatea un número absoluto como currency para mostrar: "$87.43"
+function fmt(abs) {
+  return '$' + Math.abs(abs).toLocaleString('en-CA', {
+    minimumFractionDigits: 2, maximumFractionDigits: 2
+  });
 }
 
-function formatDisplay(absAmount) {
-  return '$' + absAmount.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// Formatea para enviar al API según el doc: gastos "($45.00)", ingresos "$500.00"
+function toApiAmount(absNum, tipo) {
+  const s = Math.abs(absNum).toFixed(2);
+  return tipo === 'gasto' ? `($${s})` : `$${s}`;
+}
+
+// Fecha corta: "2025-06-01" → "1 Jun"
+function shortDate(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]}`;
 }
 
 function isThisMonth(dateStr) {
@@ -49,23 +60,21 @@ function renderCategories(expenses) {
     totals[cat] = (totals[cat] || 0) + Math.abs(parseAmount(t['Amount (CAD)']));
   }
 
-  const html = Object.entries(BUDGETS).map(([cat, budget]) => {
+  document.getElementById('categoryList').innerHTML = Object.entries(BUDGETS).map(([cat, budget]) => {
     const spent = totals[cat] || 0;
-    const pct = Math.min((spent / budget) * 100, 100);
-    const color = pct >= 100 ? '#C0392B' : pct >= 75 ? '#8B6000' : '#1A6B3A';
+    const pct   = Math.min((spent / budget) * 100, 100);
+    const color = pct >= 100 ? '#B91C1C' : pct >= 75 ? '#8B6000' : '#1A6B3A';
     return `
       <div class="cat-row">
         <div class="cat-header">
           <span class="cat-name">${cat}</span>
-          <span class="cat-amounts">${formatDisplay(spent)} / $${budget}</span>
+          <span class="cat-amounts">${fmt(spent)} <span class="cat-sep">/</span> $${budget}</span>
         </div>
         <div class="progress-track">
           <div class="progress-bar" style="width:${pct}%;background:${color}"></div>
         </div>
       </div>`;
   }).join('');
-
-  document.getElementById('categoryList').innerHTML = html;
 }
 
 function renderTransactions(txs) {
@@ -74,21 +83,22 @@ function renderTransactions(txs) {
     el.innerHTML = '<p class="empty">Sin transacciones recientes.</p>';
     return;
   }
-
   el.innerHTML = txs.map(t => {
-    const amount = parseAmount(t['Amount (CAD)']);
-    const isExpense = amount < 0;
+    const amount     = parseAmount(t['Amount (CAD)']);
+    const isExpense  = amount < 0;
     const needsReview = t['Needs Review'] === 'Yes';
-    const cat = t['App Category'] || t['Raw Category'] || '';
+    const cat        = t['App Category'] || t['Raw Category'] || '';
     return `
       <div class="tx-row${needsReview ? ' needs-review' : ''}">
-        <span class="tx-date">${t.Date}</span>
+        <span class="tx-date">${shortDate(t.Date)}</span>
         ${ownerChip(t.Owner)}
-        <span class="tx-merchant">${t.Merchant}</span>
-        <div class="tx-right">
-          <span class="tx-amount ${isExpense ? 'expense' : 'income'}">${isExpense ? '-' : '+'}${formatDisplay(Math.abs(amount))}</span>
+        <div class="tx-mid">
+          <span class="tx-merchant">${t.Merchant}</span>
           <span class="tx-cat">${cat}</span>
         </div>
+        <span class="tx-amount ${isExpense ? 'expense' : 'income'}">
+          ${isExpense ? '-' : '+'}${fmt(Math.abs(amount))}
+        </span>
       </div>`;
   }).join('');
 }
@@ -100,71 +110,89 @@ async function loadData() {
     const data = await res.json();
 
     const now = new Date();
-    document.getElementById('monthLabel').textContent = `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
+    document.getElementById('monthLabel').textContent =
+      `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
 
     const thisMonth = data.filter(t => isThisMonth(t.Date));
     const expenses  = thisMonth.filter(t => parseAmount(t['Amount (CAD)']) < 0);
     const total     = expenses.reduce((s, t) => s + Math.abs(parseAmount(t['Amount (CAD)'])), 0);
 
-    document.getElementById('totalSpent').textContent = formatDisplay(total);
-
+    document.getElementById('totalSpent').textContent = fmt(total);
     renderCategories(expenses);
     renderTransactions([...data].reverse().slice(0, 20));
   } catch (err) {
-    document.getElementById('totalSpent').textContent = 'Error';
+    document.getElementById('totalSpent').textContent = '—';
+    document.getElementById('categoryList').innerHTML =
+      `<p class="empty">Error conectando con el backend.<br><small>${err.message}</small></p>`;
     document.getElementById('txList').innerHTML =
-      `<p class="empty">No se pudo conectar con el backend.<br>${err.message}</p>`;
+      `<p class="empty">Asegúrate de que el backend está corriendo:<br><code>python backend/app.py</code></p>`;
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  const dateInput  = document.getElementById('date');
-  const submitBtn  = document.getElementById('submitBtn');
-  const formMsg    = document.getElementById('formMsg');
+// ── Tipo toggle ──────────────────────────────────────────────
+let tipoActual = 'gasto';
 
+document.addEventListener('DOMContentLoaded', () => {
+  const dateInput = document.getElementById('date');
   dateInput.value = new Date().toISOString().split('T')[0];
+
+  // Tipo toggle
+  document.querySelectorAll('.tipo-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tipo-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      tipoActual = btn.dataset.tipo;
+    });
+  });
+
   loadData();
 
+  // ── Submit ───────────────────────────────────────────────
   document.getElementById('txForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Guardando...';
-    formMsg.textContent = '';
-    formMsg.className = 'form-msg';
+    const btn    = document.getElementById('submitBtn');
+    const msgEl  = document.getElementById('formMsg');
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+    msgEl.textContent = '';
+    msgEl.className   = 'form-msg';
 
-    const amount = parseFloat(document.getElementById('amount').value);
+    const absAmount = Math.abs(parseFloat(document.getElementById('amount').value));
     const payload = {
-      date:       document.getElementById('date').value,
-      account:    document.getElementById('account').value || '',
-      owner:      document.getElementById('owner').value,
-      merchant:   document.getElementById('merchant').value,
-      amount:     formatForAPI(amount),
-      category:   document.getElementById('category').value,
+      date:        document.getElementById('date').value,
+      account:     document.getElementById('account').value,
+      owner:       document.getElementById('owner').value,
+      merchant:    document.getElementById('merchant').value,
+      amount:      toApiAmount(absAmount, tipoActual),
+      category:    document.getElementById('category').value,
       subcategory: '',
     };
 
     try {
       const res = await fetch(`${API}/api/transactions`, {
-        method: 'POST',
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body:    JSON.stringify(payload),
       });
       const result = await res.json();
       if (result.success) {
-        formMsg.textContent = `Guardado correctamente (${result.transaction_id})`;
-        formMsg.className = 'form-msg success';
+        msgEl.textContent = `Guardado en Sheets (${result.transaction_id})`;
+        msgEl.className   = 'form-msg success';
         e.target.reset();
         dateInput.value = new Date().toISOString().split('T')[0];
+        tipoActual = 'gasto';
+        document.querySelectorAll('.tipo-btn').forEach(b =>
+          b.classList.toggle('active', b.dataset.tipo === 'gasto'));
         loadData();
       } else {
         throw new Error(result.message || 'Error desconocido');
       }
     } catch (err) {
-      formMsg.textContent = `Error: ${err.message}`;
-      formMsg.className = 'form-msg error';
+      msgEl.textContent = `Error: ${err.message}`;
+      msgEl.className   = 'form-msg error';
     } finally {
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Guardar transacción';
+      btn.disabled    = false;
+      btn.textContent = 'Guardar transacción';
     }
   });
 });
