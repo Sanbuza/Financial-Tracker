@@ -7,7 +7,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins="*", allow_headers=["Content-Type", "Access-Control-Request-Private-Network"])
+
+@app.after_request
+def add_headers(response):
+    response.headers["Access-Control-Allow-Private-Network"] = "true"
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    return response
 
 SHEETS_URL = os.getenv("SHEETS_API_URL")
 
