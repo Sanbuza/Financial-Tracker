@@ -1,4 +1,191 @@
-/* Finance Tracker — Estilos globales */
-/* Mobile-first: base 390px, max-width 640px */
-/* Fuente: Inter (Google Fonts) */
-/* Colores: verde #1A6B3A | ámbar #8B6000 | chips S:#0F2D6B C:#0D7377 */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: #F4F5F7;
+  color: #1A1A2E;
+  min-height: 100vh;
+  padding: 16px 16px 40px;
+}
+
+.container {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.header h1 { font-size: 1.2rem; font-weight: 700; }
+.month-label { font-size: 0.85rem; color: #6B7280; font-weight: 500; }
+
+/* Summary hero */
+.summary-card {
+  background: #1A1A2E;
+  color: white;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 14px;
+}
+.summary-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  opacity: 0.6;
+  margin-bottom: 8px;
+}
+.summary-amount {
+  font-size: 2.6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Generic card */
+.card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 14px;
+}
+.section-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #9CA3AF;
+  margin-bottom: 14px;
+}
+
+/* Category breakdown */
+.cat-row { margin-bottom: 14px; }
+.cat-row:last-child { margin-bottom: 0; }
+.cat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+.cat-name { font-size: 0.88rem; font-weight: 500; }
+.cat-amounts { font-size: 0.78rem; color: #9CA3AF; font-variant-numeric: tabular-nums; }
+.progress-track {
+  height: 6px;
+  background: #F0F0F0;
+  border-radius: 99px;
+  overflow: hidden;
+}
+.progress-bar {
+  height: 100%;
+  border-radius: 99px;
+  min-width: 2px;
+}
+
+/* Form */
+.field { margin-bottom: 13px; }
+.field label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 5px;
+}
+.field input,
+.field select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid #E5E7EB;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: #1A1A2E;
+  background: white;
+  appearance: none;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.field input:focus,
+.field select:focus { border-color: #1A1A2E; }
+.field-hint { display: block; font-size: 0.73rem; color: #9CA3AF; margin-top: 4px; }
+
+.btn-submit {
+  width: 100%;
+  padding: 13px;
+  background: #1A1A2E;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: opacity 0.15s;
+}
+.btn-submit:hover { opacity: 0.88; }
+.btn-submit:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.form-msg { font-size: 0.82rem; margin-top: 10px; text-align: center; min-height: 1.2em; }
+.form-msg.success { color: #1A6B3A; }
+.form-msg.error   { color: #C0392B; }
+
+/* Transaction list */
+.tx-row {
+  display: grid;
+  grid-template-columns: 76px 26px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid #F3F4F6;
+}
+.tx-row:last-child { border-bottom: none; }
+.tx-row.needs-review {
+  background: #FFFBEB;
+  margin: 0 -20px;
+  padding: 10px 20px;
+  border-bottom-color: #FEF3C7;
+}
+
+.tx-date { font-size: 0.73rem; color: #9CA3AF; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 0.68rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.chip-s { background: #0F2D6B; color: white; }
+.chip-c { background: #0D7377; color: white; }
+.chip-j { background: #E5E7EB; color: #374151; }
+
+.tx-merchant {
+  font-size: 0.88rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tx-right { text-align: right; }
+.tx-amount {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.tx-amount.expense { color: #1A1A2E; }
+.tx-amount.income  { color: #1A6B3A; }
+.tx-cat { display: block; font-size: 0.7rem; color: #9CA3AF; margin-top: 1px; }
+
+.empty { color: #9CA3AF; font-size: 0.9rem; text-align: center; padding: 24px 0; }
+.loading { color: #9CA3AF; font-size: 0.85rem; text-align: center; padding: 12px 0; }
