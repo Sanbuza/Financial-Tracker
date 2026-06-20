@@ -13,8 +13,10 @@ const BUDGETS = {
 const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
                      'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-function parseAmount(str) {
-  if (!str) return 0;
+function parseAmount(val) {
+  if (val === null || val === undefined || val === '') return 0;
+  if (typeof val === 'number') return val;
+  const str = String(val);
   if (str.startsWith('(')) return -parseFloat(str.replace(/[($),]/g, ''));
   return parseFloat(str.replace(/[$,]/g, '')) || 0;
 }
